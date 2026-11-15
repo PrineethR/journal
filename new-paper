@@ -1,0 +1,463 @@
+#!/usr/bin/env python3
+"""Write papers for the Journal of Personal Curiosities in Markdown.
+
+  ./new-paper "Title of the paper"       start a draft at papers/<slug>/paper.md
+  ./new-paper papers/<slug>              build index.html from the draft and
+                                         add it to the contents on the cover
+  ./new-paper papers/<slug> --publish    build, then commit and push
+
+Run the build as often as you like; it replaces the page and the cover entry.
+Needs only Python 3. The Markdown it understands is described in the starter
+draft and in README.md.
+"""
+
+import datetime
+import html
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+COVER = ROOT / "index.html"
+MARKER = "<!-- new papers go here -->"
+
+AUTHOR = "Prineeth Ramachandra"
+AUTHOR_CITE = "P. Ramachandra"
+JOURNAL = "Journal of Personal Curiosities"
+ABBREV = "J. Pers. Curios."
+SITE = "writing.prineethr.com"
+VOLUME = 1
+
+DRAFT = """---
+title: {title}
+date: {date}
+number: {number}
+summary: One line for the contents page.
+keywords: one, two, three
+---
+
+Everything before the first heading is the abstract. Say what the paper is
+about in a few sentences.
+
+## Introduction
+
+Paragraphs are separated by a blank line. Use *italic*, **bold**, `code` and
+[links](https://example.com). A footnote is written where it is called.^[Like
+this. It is moved to the end of the paper and numbered.]
+
+Cite a reference by its key [@example]. Point at a figure or a section with an
+empty link: [](#fig-example) and [](#second-section).
+
+![What the figure shows. Put the image file in this folder.](figure.png){{#fig-example}}
+
+## Second section
+
+- A list item
+- Another
+
+> A quotation.
+
+Anything that starts with an HTML tag is passed through untouched, so tables,
+SVG drawings and interactive figures are written as HTML:
+
+<figure id="fig-html">
+  <!-- an <svg>, or some HTML and a <script> -->
+  <figcaption>A figure written by hand.</figcaption>
+</figure>
+
+## References
+
+- [example] A. Author. *Title*. Publisher, Year.
+"""
+
+PAGE = """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{title_text} | {journal}</title>
+  <meta name="description" content="{description}">
+  <link rel="stylesheet" href="/journal.css">
+  <script src="/journal.js" defer></script>
+</head>
+<body>
+  <!-- Built from paper.md by new-paper. Edit the draft, not this file. -->
+  <div class="sheet">
+
+    <nav class="running-head">
+      <a href="/">{journal}</a>
+      <span>{abbrev} {volume} ({number}), {year}</span>
+    </nav>
+
+    <article>
+
+      <header class="front">
+        <h1>{title}</h1>
+        <p class="authors">{author}</p>
+        <p class="dates">Received {date}.</p>
+      </header>
+
+{body}
+
+      <section class="back cite-as">
+        <p>Cite as: {author_cite}. {title}. <i>{abbrev}</i> {volume} ({number}), {year}. {site}/papers/{slug}/</p>
+      </section>
+
+    </article>
+  </div>
+</body>
+</html>
+"""
+
+ENTRY = """        <li data-paper="{slug}">
+          <div class="entry">
+            <a href="/papers/{slug}/">{title}</a>
+            <span class="dots"></span>
+            <span class="when">No. {number}, {date}</span>
+          </div>{summary}
+        </li>
+"""
+
+
+def fail(message):
+    sys.exit("new-paper: " + message)
+
+
+def slugify(text):
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+# ---------- Inline Markdown ----------
+
+def balanced(text, start):
+    """Index of the ] that closes the [ just before `start`, or -1."""
+    depth = 1
+    for i in range(start, len(text)):
+        if text[i] == "[":
+            depth += 1
+        elif text[i] == "]":
+            depth -= 1
+            if depth == 0:
+                return i
+    return -1
+
+
+def format_inline(text):
+    # Footnotes: ^[text], which may itself contain links and citations.
+    out, i = "", 0
+    while True:
+        j = text.find("^[", i)
+        end = balanced(text, j + 2) if j != -1 else -1
+        if end == -1:
+            out += text[i:]
+            break
+        out += text[i:j] + '<span class="fn">' + format_inline(text[j + 2:end]) + "</span>"
+        i = end + 1
+    text = out
+
+    def cite(match):
+        keys = [k.strip().lstrip("@") for k in re.split(r"[;,]", match.group(1))]
+        return ", ".join('<a href="#ref-%s"></a>' % k for k in keys if k)
+
+    text = re.sub(r"\[@([^\]]+)\]", cite, text)
+    text = re.sub(r"\[([^\]]*)\]\(([^)\s]+)\)", r'<a href="\2">\1</a>', text)
+    text = re.sub(r"\*\*(?!\s)(.+?)(?<!\s)\*\*", r"<strong>\1</strong>", text)
+    text = re.sub(r"(?<!\*)\*(?![\s*])(.+?)(?<![\s*])\*(?!\*)", r"<i>\1</i>", text)
+    return text
+
+
+def inline(text):
+    spans = []
+
+    def protect(match):
+        spans.append("<code>" + html.escape(match.group(1), quote=False) + "</code>")
+        return "\x00%d\x00" % (len(spans) - 1)
+
+    text = re.sub(r"`([^`]+)`", protect, text)
+    text = re.sub(r"&(?!#?\w+;)", "&amp;", text)
+    text = format_inline(text)
+    return re.sub(r"\x00(\d+)\x00", lambda m: spans[int(m.group(1))], text)
+
+
+# ---------- Blocks ----------
+
+ATTRS = re.compile(r"\s*\{([^}]*)\}\s*$")
+IMAGE = re.compile(r"!\[(.*)\]\(([^)\s]+)\)$", re.S)
+VOID = {"img", "hr", "br", "input", "link", "meta"}
+
+
+def split_attrs(text):
+    """Strip a trailing {#id .class} and return (text, id, classes)."""
+    match = ATTRS.search(text)
+    if not match:
+        return text, None, []
+    ident, classes = None, []
+    for part in match.group(1).split():
+        if part.startswith("#"):
+            ident = part[1:]
+        elif part.startswith("."):
+            classes.append(part[1:])
+    return text[:match.start()], ident, classes
+
+
+def parse(lines):
+    """Turn the draft's lines into a list of (kind, ...) blocks."""
+    blocks, i = [], 0
+    while i < len(lines):
+        line = lines[i]
+        if not line.strip():
+            i += 1
+            continue
+
+        if line.startswith("```"):
+            j = i + 1
+            while j < len(lines) and not lines[j].startswith("```"):
+                j += 1
+            blocks.append(("code", "\n".join(lines[i + 1:j])))
+            i = j + 1
+            continue
+
+        tag = re.match(r"<(\w+)", line)
+        if tag or line.startswith("<!--"):
+            close = "</%s>" % tag.group(1) if tag else "-->"
+            j = i
+            if not (tag and tag.group(1) in VOID):
+                while j < len(lines) - 1 and close not in lines[j]:
+                    j += 1
+            blocks.append(("raw", "\n".join(lines[i:j + 1])))
+            i = j + 1
+            continue
+
+        heading = re.match(r"(#{1,3})\s+(.*)", line)
+        if heading:
+            text, ident, _ = split_attrs(heading.group(2))
+            blocks.append(("h%d" % len(heading.group(1)), text.strip(), ident or slugify(text)))
+            i += 1
+            continue
+
+        j = i
+        while j < len(lines) and lines[j].strip() and not re.match(r"```|#{1,3}\s", lines[j]):
+            j += 1
+        chunk = lines[i:j]
+        i = j
+        text = "\n".join(chunk)
+
+        body, ident, classes = split_attrs(text)
+        image = IMAGE.match(body.strip())
+        if image:
+            blocks.append(("figure", image.group(1), image.group(2), ident, classes))
+        elif all(l.startswith(">") for l in chunk):
+            blocks.append(("quote", "\n".join(l[1:].strip() for l in chunk)))
+        elif re.match(r"([-*]|\d+\.)\s", chunk[0]):
+            items = []
+            for l in chunk:
+                item = re.match(r"\s*(?:[-*]|\d+\.)\s+(.*)", l)
+                if item:
+                    items.append(item.group(1))
+                else:
+                    items[-1] += "\n" + l.strip()
+            blocks.append(("ol" if chunk[0][0].isdigit() else "ul", items))
+        else:
+            blocks.append(("p", text))
+    return blocks
+
+
+def render(block, pad, references=False):
+    kind = block[0]
+    if kind == "p":
+        return pad + "<p>" + inline(block[1]) + "</p>"
+    if kind == "h3":
+        return pad + '<h3 id="%s">%s</h3>' % (block[2], inline(block[1]))
+    if kind == "raw":
+        return "\n".join(pad + l if l else l for l in block[1].split("\n"))
+    if kind == "code":
+        return pad + "<pre><code>" + html.escape(block[1], quote=False) + "</code></pre>"
+    if kind == "quote":
+        return pad + "<blockquote>" + inline(block[1]) + "</blockquote>"
+    if kind == "figure":
+        _, caption, src, ident, classes = block
+        attrs = (' class="%s"' % " ".join(classes) if classes else "") + (' id="%s"' % ident if ident else "")
+        alt = html.escape(re.sub(r"<[^>]+>|[*`]|\^\[.*?\]", "", caption))
+        return "\n".join([
+            pad + "<figure%s>" % attrs,
+            pad + '  <img src="%s" alt="%s">' % (src, alt),
+            pad + "  <figcaption>" + inline(caption) + "</figcaption>",
+            pad + "</figure>",
+        ])
+    if kind in ("ul", "ol"):
+        rows = []
+        for item in block[1]:
+            key = re.match(r"\[([\w-]+)\]\s+(.*)", item, re.S) if references else None
+            if key:
+                rows.append(pad + '  <li id="ref-%s">%s</li>' % (key.group(1), inline(key.group(2))))
+            else:
+                rows.append(pad + "  <li>" + inline(item) + "</li>")
+        tag = "ol" if references else kind
+        return "\n".join([pad + "<%s>" % tag] + rows + [pad + "</%s>" % tag])
+    return ""
+
+
+def build_body(blocks, keywords):
+    out, pad, inner = [], "      ", "        "
+    first = next((n for n, b in enumerate(blocks) if b[0] == "h2"), len(blocks))
+    abstract, rest = blocks[:first], blocks[first:]
+
+    if abstract or keywords:
+        out.append(pad + '<section class="abstract">')
+        out += [render(b, inner) for b in abstract]
+        if keywords:
+            out.append(inner + '<p class="keywords">' + inline(keywords) + "</p>")
+        out.append(pad + "</section>")
+
+    open_section, references = False, False
+    for block in rest:
+        if block[0] == "h1":
+            continue  # the title comes from the front matter
+        if block[0] == "h2":
+            if open_section:
+                out.append(pad + "</section>")
+            references = block[1].lower() == "references"
+            if references:
+                out.append("\n" + pad + '<section class="back references">')
+            else:
+                out.append("\n" + pad + '<section id="%s">' % block[2])
+            out.append(inner + "<h2>" + inline(block[1]) + "</h2>")
+            open_section = True
+        else:
+            out.append(render(block, inner if open_section else pad, references))
+    if open_section:
+        out.append(pad + "</section>")
+    return "\n".join(out)
+
+
+# ---------- Commands ----------
+
+def read_draft(path):
+    text = path.read_text(encoding="utf-8")
+    match = re.match(r"---\n(.*?)\n---\n?(.*)", text, re.S)
+    if not match:
+        fail("%s has no front matter (the --- block at the top)." % path)
+    meta = {}
+    for line in match.group(1).split("\n"):
+        if ":" in line:
+            key, value = line.split(":", 1)
+            meta[key.strip().lower()] = value.strip()
+    if not meta.get("title"):
+        fail("%s needs a title in its front matter." % path)
+    return meta, match.group(2).split("\n")
+
+
+def next_number():
+    numbers = [int(n) for n in re.findall(r"No\. (\d+)", COVER.read_text(encoding="utf-8"))]
+    return max(numbers) + 1 if numbers else 0
+
+
+def start(title):
+    slug = slugify(title)
+    if not slug:
+        fail("that title has no letters or numbers in it.")
+    folder = ROOT / "papers" / slug
+    draft = folder / "paper.md"
+    if folder.exists():
+        fail("papers/%s already exists." % slug)
+    today = datetime.date.today()
+    folder.mkdir(parents=True)
+    draft.write_text(
+        DRAFT.format(title=title, date="%d %s" % (today.day, today.strftime("%B %Y")), number=next_number()),
+        encoding="utf-8",
+    )
+    print("Started papers/%s/paper.md" % slug)
+    print("Write there, then run:  ./new-paper papers/%s" % slug)
+
+
+def update_cover(slug, meta, number):
+    cover = COVER.read_text(encoding="utf-8")
+    short_date = re.sub(r"\b([A-Z][a-z]{2})[a-z]+\b", r"\1", meta.get("date", ""))
+    summary = meta.get("summary", "")
+    entry = ENTRY.format(
+        slug=slug,
+        title=inline(meta["title"]),
+        number=number,
+        date=short_date,
+        summary='\n          <p class="summary">%s</p>' % inline(summary) if summary else "",
+    )
+    existing = re.compile(r'[ \t]*<li data-paper="%s">.*?</li>\n' % re.escape(slug), re.S)
+    if existing.search(cover):
+        cover = existing.sub(lambda m: entry, cover, count=1)
+    elif MARKER in cover:
+        cover = cover.replace(MARKER + "\n", MARKER + "\n" + entry, 1)
+    else:
+        fail("index.html has lost its marker line: %s" % MARKER)
+    COVER.write_text(cover, encoding="utf-8")
+
+
+def build(target):
+    draft = target / "paper.md" if target.is_dir() else target
+    if not draft.is_file():
+        fail("no draft at %s" % draft)
+    folder = draft.resolve().parent
+    if folder.parent != ROOT / "papers":
+        fail("drafts live at papers/<name>/paper.md")
+    slug = folder.name
+    meta, lines = read_draft(draft)
+    number = meta.get("number") or str(next_number())
+    year = (re.findall(r"\b\d{4}\b", meta.get("date", "")) or [str(datetime.date.today().year)])[-1]
+    title = inline(meta["title"])
+
+    page = PAGE.format(
+        title=title,
+        title_text=html.escape(re.sub(r"[*`]", "", meta["title"]), quote=False),
+        description=html.escape(meta.get("summary", "")),
+        journal=JOURNAL, abbrev=ABBREV, volume=VOLUME, site=SITE,
+        author=AUTHOR, author_cite=AUTHOR_CITE,
+        number=number, year=year, slug=slug,
+        date=meta.get("date", ""),
+        body=build_body(parse(lines), meta.get("keywords", "")),
+    )
+    (folder / "index.html").write_text(page, encoding="utf-8")
+    update_cover(slug, meta, number)
+    print("Built papers/%s/index.html and updated the contents." % slug)
+
+    ids = set(re.findall(r'\bid="([^"]+)"', page))
+    for ref in sorted(set(re.findall(r'href="#([^"]+)"', page)) - ids):
+        print("  warning: nothing has the id “%s”; that reference will print as ??" % ref)
+    for src in re.findall(r'<img src="([^":]+)"', page):
+        if not (folder / src).is_file():
+            print("  warning: image not found: papers/%s/%s" % (slug, src))
+    return meta["title"]
+
+
+def publish(title):
+    def git(*args):
+        return subprocess.run(["git", "-C", str(ROOT)] + list(args))
+
+    git("add", "-A")
+    if git("diff", "--cached", "--quiet").returncode == 0:
+        print("Nothing new to commit.")
+    elif git("commit", "-q", "-m", "Publish: " + title).returncode != 0:
+        fail("the commit failed.")
+    if git("push").returncode != 0:
+        fail("the push failed; the paper is committed but not online.")
+    print("Pushed. It will be at https://%s in about a minute." % SITE)
+
+
+def main():
+    args = [a for a in sys.argv[1:] if a != "--publish"]
+    if len(args) != 1 or args[0] in ("-h", "--help"):
+        sys.exit(__doc__.strip())
+    target = Path(args[0])
+    if target.exists():
+        title = build(target)
+        if "--publish" in sys.argv:
+            publish(title)
+    elif "/" in args[0] or args[0].endswith(".md"):
+        fail("nothing at %s" % args[0])
+    elif "--publish" in sys.argv:
+        fail("--publish goes with a paper folder, e.g. ./new-paper papers/<name> --publish")
+    else:
+        start(args[0])
+
+
+if __name__ == "__main__":
+    main()

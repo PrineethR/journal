@@ -160,12 +160,14 @@
 
       <section id="submitting">
         <h2>Publishing a paper</h2>
+        <p>Papers are drafted in Markdown and turned into pages by a script, <code>new-paper</code>, kept at the top of the repository.</p>
         <ol>
-          <li>Copy the folder <code>papers/_template</code> and rename it. The folder name becomes the address.</li>
-          <li>Write the paper in its <code>index.html</code>. Put images in the same folder.</li>
-          <li>Add one entry for it to the contents list on the cover page.</li>
-          <li>Commit and push. The paper is published when the push finishes.</li>
+          <li>Run <code>./new-paper "Title of the paper"</code>. It starts a draft, <code>paper.md</code>, in a new folder whose name becomes the address.</li>
+          <li>Write in the draft. Put images in the same folder. Anything beyond prose, such as an interactive figure, is written as HTML in the middle of the Markdown.</li>
+          <li>Run <code>./new-paper papers/name</code> to build the page and add it to the contents on the cover. Run it again after every change.</li>
+          <li>Add <code>--publish</code> to that command to commit and push. The paper is online about a minute later.</li>
         </ol>
+        <p>A paper can also be written directly in HTML, as this one was, by copying <code>papers/_template</code>.</p>
       </section>
 
       <section class="back references">
