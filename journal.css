@@ -18,7 +18,7 @@
 
 * { box-sizing: border-box; }
 
-html { font-size: 112.5%; scroll-behavior: smooth; }
+html { font-size: 125%; scroll-behavior: smooth; }
 
 body {
   margin: 0;
@@ -41,9 +41,9 @@ a:focus-visible, input:focus-visible, button:focus-visible {
 
 .sheet {
   background: var(--sheet);
-  max-width: 44rem;
+  max-width: 54rem;
   margin: 2.5rem auto;
-  padding: 2.5rem 5.5rem 4.5rem;
+  padding: 2.5rem clamp(2.5rem, 9vw, 6.5rem) 4.5rem;
   box-shadow: 0 1px 2px rgba(23, 30, 45, 0.18), 0 14px 44px rgba(23, 30, 45, 0.12);
 }
 
@@ -77,7 +77,7 @@ a:focus-visible, input:focus-visible, button:focus-visible {
 .front .affiliation { font-size: 0.85rem; font-style: italic; color: var(--quiet); margin: 0.2rem 0 0; }
 .front .dates { font-size: 0.8rem; color: var(--quiet); margin: 0.9rem 0 0; }
 
-.abstract { margin: 0 2.5rem 2.5rem; font-size: 0.9rem; }
+.abstract { margin: 0 4rem 2.5rem; font-size: 0.9rem; }
 .abstract > p:first-of-type::before { content: "Abstract. "; font-weight: 700; }
 .abstract .keywords { margin-top: 0.6rem; text-indent: 0; text-align: left; }
 .abstract .keywords::before { content: "Keywords: "; font-style: italic; }
@@ -142,6 +142,7 @@ figure {
   scroll-margin-top: 1rem;
 }
 figure.wide { margin-inline: -3rem; }
+article figure > svg { max-width: 38rem; } /* drawings keep their size when the column is wide */
 figure img, figure svg, figure video, figure canvas { display: block; max-width: 100%; height: auto; margin-inline: auto; }
 
 figcaption { font-size: 0.85rem; line-height: 1.4; margin-top: 0.75rem; color: var(--ink); }
