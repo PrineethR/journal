@@ -1,0 +1,285 @@
+/* Journal of Personal Curiosities
+   One stylesheet for the cover, every paper, and the 404 page. */
+
+@import url("https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400..700;1,400..700&display=swap");
+
+:root {
+  --desk: #dcdfe3;      /* what the sheet of paper lies on */
+  --sheet: #ffffff;
+  --ink: #17181a;
+  --quiet: #5b6068;     /* captions, dates, running head */
+  --rule: #c8ccd2;
+  --tint: #f0f2f5;      /* code, figure fills */
+  --link: #1b3a93;      /* links, citations, controls */
+  --mark: #fff3b0;      /* highlighter, for whatever you just jumped to */
+  --serif: "STIX Two Text", "STIX Two", "Times New Roman", Times, serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 112.5%; scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--desk);
+  color: var(--ink);
+  font-family: var(--serif);
+  line-height: 1.5;
+  font-variant-numeric: oldstyle-nums;
+  -webkit-text-size-adjust: 100%;
+}
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible, input:focus-visible, button:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
+}
+
+/* ---------- The sheet ---------- */
+
+.sheet {
+  background: var(--sheet);
+  max-width: 44rem;
+  margin: 2.5rem auto;
+  padding: 2.5rem 5.5rem 4.5rem;
+  box-shadow: 0 1px 2px rgba(23, 30, 45, 0.18), 0 14px 44px rgba(23, 30, 45, 0.12);
+}
+
+.running-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--quiet);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.5rem;
+  margin-bottom: 3.25rem;
+}
+.running-head a { color: inherit; }
+
+/* ---------- Front matter ---------- */
+
+.front { text-align: center; margin-bottom: 2rem; }
+
+.front h1 {
+  font-size: 1.95rem;
+  font-weight: 400;
+  line-height: 1.18;
+  margin: 0 0 1.25rem;
+  text-wrap: balance;
+}
+
+.front p { text-align: center; text-indent: 0; hyphens: manual; }
+.front .authors { font-size: 1.05rem; margin: 0; }
+.front .affiliation { font-size: 0.85rem; font-style: italic; color: var(--quiet); margin: 0.2rem 0 0; }
+.front .dates { font-size: 0.8rem; color: var(--quiet); margin: 0.9rem 0 0; }
+
+.abstract { margin: 0 2.5rem 2.5rem; font-size: 0.9rem; }
+.abstract > p:first-of-type::before { content: "Abstract. "; font-weight: 700; }
+.abstract .keywords { margin-top: 0.6rem; text-indent: 0; text-align: left; }
+.abstract .keywords::before { content: "Keywords: "; font-style: italic; }
+
+/* ---------- Body ---------- */
+
+article { counter-reset: sec fig tab eq; }
+
+article p {
+  margin: 0;
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+article p + p { text-indent: 1.5em; }
+
+article h2 {
+  font-size: 1.15rem;
+  line-height: 1.3;
+  margin: 2.1rem 0 0.55rem;
+  counter-increment: sec;
+  counter-reset: sub;
+  scroll-margin-top: 1rem;
+}
+article h2::before { content: counter(sec) ".\2002"; }
+
+article h3 {
+  font-size: 1rem;
+  margin: 1.4rem 0 0.4rem;
+  counter-increment: sub;
+}
+article h3::before { content: counter(sec) "." counter(sub) "\2002"; }
+
+.back h2 { counter-increment: none; }
+.back h2::before { content: none; }
+
+article ul, article ol { margin: 0.6rem 0; padding-left: 1.5em; }
+
+blockquote {
+  margin: 1rem 1.5em;
+  font-size: 0.93rem;
+  color: var(--quiet);
+}
+
+code { font-family: var(--mono); font-size: 0.8em; background: var(--tint); padding: 0.08em 0.3em; border-radius: 3px; }
+pre {
+  background: var(--tint);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  padding: 0.9rem 1rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+  border-radius: 3px;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- Figures and tables ---------- */
+
+figure {
+  margin: 1.9rem 0;
+  counter-increment: fig;
+  scroll-margin-top: 1rem;
+}
+figure.wide { margin-inline: -3rem; }
+figure img, figure svg, figure video, figure canvas { display: block; max-width: 100%; height: auto; margin-inline: auto; }
+
+figcaption { font-size: 0.85rem; line-height: 1.4; margin-top: 0.75rem; color: var(--ink); }
+figcaption::before { content: "Figure " counter(fig) ".\2002"; font-weight: 700; }
+
+figure.table { counter-increment: tab; }
+figure.table figcaption { margin: 0 0 0.6rem; }
+figure.table figcaption::before { content: "Table " counter(tab) ".\2002"; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.87rem;
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+}
+th, td { text-align: left; vertical-align: top; padding: 0.35rem 0.9rem 0.35rem 0; }
+th { font-weight: 700; border-bottom: 1px solid var(--ink); }
+
+/* Controls inside interactive figures */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+.controls input[type="range"] { accent-color: var(--link); flex: 1 1 12rem; min-width: 0; }
+.controls output { font-variant-numeric: tabular-nums lining-nums; }
+
+/* ---------- Equations ---------- */
+
+.eq {
+  display: flex;
+  align-items: center;
+  margin: 1rem 0;
+  counter-increment: eq;
+  scroll-margin-top: 1rem;
+}
+.eq::before { content: ""; width: 2.5em; }
+.eq::after { content: "(" counter(eq) ")"; width: 2.5em; text-align: right; }
+.eq > * { flex: 1; text-align: center; font-size: 1.08rem; }
+.eq var, p var { font-style: italic; }
+.frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; }
+.frac > :first-child { border-bottom: 1px solid var(--ink); padding: 0 0.3em; }
+
+/* ---------- Footnotes ---------- */
+
+/* Before journal.js runs (or if it never does), a note reads inline. */
+span.fn { font-size: 0.85em; color: var(--quiet); }
+span.fn::before { content: " ["; }
+span.fn::after { content: "]"; }
+
+sup.fn-ref { font-size: 0.7em; line-height: 0; font-variant-numeric: lining-nums; padding-left: 0.1em; }
+
+.footnotes { margin-top: 2.75rem; font-size: 0.82rem; }
+.footnotes::before { content: ""; display: block; width: 8rem; border-top: 1px solid var(--ink); margin-bottom: 0.7rem; }
+.footnotes ol { margin: 0; padding-left: 1.4em; }
+.footnotes li { margin-bottom: 0.3rem; }
+.fn-back { padding-left: 0.3em; }
+
+/* ---------- References and citation ---------- */
+
+.references ol { list-style: none; counter-reset: ref; padding-left: 2.3em; margin: 0; font-size: 0.85rem; }
+.references li { counter-increment: ref; position: relative; margin-bottom: 0.4rem; }
+.references li::before { content: "[" counter(ref) "]"; position: absolute; left: -2.3em; font-variant-numeric: lining-nums; }
+
+.cite-as { margin-top: 2.5rem; font-size: 0.82rem; color: var(--quiet); border-top: 1px solid var(--rule); padding-top: 0.8rem; }
+.cite-as p { text-align: left; hyphens: manual; }
+
+li:target, .eq:target { background: var(--mark); box-shadow: 0 0 0 0.25rem var(--mark); }
+li { scroll-margin-top: 2rem; }
+
+/* ---------- Cover (the home page) ---------- */
+
+.masthead { text-align: center; padding: 2.5rem 0 2.25rem; text-wrap: balance; }
+.masthead h1 {
+  font-size: 3rem;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.masthead h1 small { display: block; font-size: 1.15rem; font-style: italic; letter-spacing: 0; margin-bottom: 0.5rem; }
+.masthead p { margin: 1.25rem auto 0; max-width: 26rem; font-style: italic; color: var(--quiet); }
+
+.imprint {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.85rem;
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  padding: 0.45rem 0;
+}
+
+.contents h2 { font-size: 1rem; margin: 2.25rem 0 0.75rem; }
+.contents ol { list-style: none; margin: 0; padding: 0; }
+.contents li { margin-bottom: 1rem; }
+.contents .entry { display: flex; align-items: baseline; }
+.contents .entry a { font-size: 1.1rem; }
+.contents .dots { flex: 1; min-width: 1.5rem; border-bottom: 1px dotted var(--quiet); margin: 0 0.5em; transform: translateY(-0.28em); }
+.contents .when { font-size: 0.85rem; color: var(--quiet); white-space: nowrap; }
+.contents .summary { margin: 0.1rem 0 0; font-size: 0.87rem; font-style: italic; color: var(--quiet); max-width: 30rem; }
+
+.colophon { margin-top: 3.5rem; font-size: 0.8rem; color: var(--quiet); border-top: 1px solid var(--rule); padding-top: 0.8rem; }
+.colophon p { margin: 0; }
+
+/* ---------- Small screens: the sheet becomes the screen ---------- */
+
+@media (max-width: 46rem) {
+  html { font-size: 106.25%; }
+  body { background: var(--sheet); }
+  .sheet { margin: 0; padding: 1.25rem 1.2rem 3rem; box-shadow: none; }
+  .running-head { margin-bottom: 2.25rem; }
+  .front h1 { font-size: 1.6rem; }
+  .abstract { margin-inline: 0.75rem; }
+  article p { text-align: left; }
+  figure.wide { margin-inline: 0; }
+  .masthead { padding: 1.5rem 0 1.75rem; }
+  .masthead h1 { font-size: 2.2rem; }
+  .contents .dots { display: none; }
+  .contents .entry { flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+/* ---------- Print: it is a paper, after all ---------- */
+
+@media print {
+  html { font-size: 11pt; }
+  body { background: none; }
+  .sheet { margin: 0; padding: 0; max-width: none; box-shadow: none; }
+  a { color: inherit; }
+  .controls, .fn-back { display: none; }
+  figure, pre, table { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+}

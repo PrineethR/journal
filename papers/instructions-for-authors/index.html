@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Instructions for authors | Journal of Personal Curiosities</title>
+  <meta name="description" content="How a paper in this journal is put together, shown by being one.">
+  <link rel="stylesheet" href="/journal.css">
+  <script src="/journal.js" defer></script>
+</head>
+<body>
+  <div class="sheet">
+
+    <nav class="running-head">
+      <a href="/">Journal of Personal Curiosities</a>
+      <span>J. Pers. Curios. 1 (0), 2026</span>
+    </nav>
+
+    <article>
+
+      <header class="front">
+        <h1>Instructions for authors</h1>
+        <p class="authors">Prineeth Ramachandra</p>
+        <p class="affiliation">The editorial office, which is also the author's desk</p>
+        <p class="dates">Received 15 November 2026. Accepted the same day, by the same person.</p>
+      </header>
+
+      <section class="abstract">
+        <p>This paper describes the format of the Journal of Personal Curiosities and is itself set in that format. It covers the parts of a paper, how figures and interactive figures are made, and how notes, equations and references number themselves. It ends with the steps for publishing a new paper. Authors who would rather not read it can copy the template and start typing.</p>
+        <p class="keywords">format, figures, footnotes, plain HTML</p>
+      </section>
+
+      <section id="scope">
+        <h2>Scope</h2>
+        <p>The Journal publishes whatever its editor became curious about and could not leave alone. Papers combine writing with visuals. There is no word limit and no schedule.</p>
+        <p>The format borrows the furniture of an academic paper: an abstract, numbered sections, numbered figures, footnotes and a reference list. These conventions are tedious to produce and surprisingly pleasant to read around, because a reader always knows where they are and what a thing is called.<span class="fn">Peer review has been retained in a simplified form. See the dates above.</span> Everything else about a paper is a web page, so a figure can move, respond, or be a small program.</p>
+      </section>
+
+      <section id="anatomy">
+        <h2>Anatomy of a paper</h2>
+        <p>A paper is one HTML file in its own folder, linked to one shared stylesheet and one short script. <a href="#fig-anatomy"></a> shows the parts in the order they appear. <a href="#tab-markup"></a> lists the markup for each.</p>
+
+        <figure id="fig-anatomy">
+          <svg viewBox="0 0 560 300" role="img" aria-label="Diagram of a page with its parts labelled: running head, title and author, abstract, numbered sections, figure and caption, footnotes, references." font-family="inherit" font-size="13">
+            <defs>
+              <pattern id="lines" width="8" height="7" patternUnits="userSpaceOnUse">
+                <rect width="8" height="2.6" fill="#b4b9c1"/>
+              </pattern>
+            </defs>
+            <rect x="60" y="6" width="200" height="288" fill="#fff" stroke="#17181a"/>
+            <!-- running head -->
+            <rect x="76" y="18" width="60" height="2.6" fill="#b4b9c1"/>
+            <rect x="214" y="18" width="30" height="2.6" fill="#b4b9c1"/>
+            <line x1="76" y1="26" x2="244" y2="26" stroke="#c8ccd2"/>
+            <!-- title and author -->
+            <rect x="105" y="38" width="110" height="6" fill="#17181a"/>
+            <rect x="135" y="50" width="50" height="2.6" fill="#b4b9c1"/>
+            <!-- abstract -->
+            <rect x="94" y="64" width="132" height="24" fill="url(#lines)"/>
+            <!-- section -->
+            <rect x="76" y="100" width="46" height="4" fill="#17181a"/>
+            <rect x="76" y="110" width="168" height="38" fill="url(#lines)"/>
+            <!-- figure -->
+            <rect x="96" y="158" width="128" height="50" fill="#e3e8f5" stroke="#1b3a93"/>
+            <polyline points="104,198 128,180 150,190 176,168 216,176" fill="none" stroke="#1b3a93" stroke-width="1.5"/>
+            <rect x="96" y="214" width="100" height="2.6" fill="#b4b9c1"/>
+            <!-- more body -->
+            <rect x="76" y="226" width="168" height="24" fill="url(#lines)"/>
+            <!-- footnotes -->
+            <line x1="76" y1="259" x2="120" y2="259" stroke="#17181a"/>
+            <rect x="76" y="264" width="130" height="2.6" fill="#b4b9c1"/>
+            <!-- references -->
+            <rect x="76" y="275" width="40" height="4" fill="#17181a"/>
+            <rect x="76" y="283" width="168" height="2.6" fill="#b4b9c1"/>
+
+            <g stroke="#5b6068" stroke-width="0.75">
+              <line x1="250" y1="20" x2="300" y2="20"/>
+              <line x1="222" y1="42" x2="300" y2="48"/>
+              <line x1="232" y1="76" x2="300" y2="80"/>
+              <line x1="250" y1="128" x2="300" y2="128"/>
+              <line x1="230" y1="184" x2="300" y2="184"/>
+              <line x1="212" y1="265" x2="300" y2="246"/>
+              <line x1="250" y1="281" x2="300" y2="281"/>
+            </g>
+            <g fill="#17181a">
+              <text x="308" y="24">Running head, which links home</text>
+              <text x="308" y="52">Title and author</text>
+              <text x="308" y="84">Abstract and keywords</text>
+              <text x="308" y="132">Numbered sections</text>
+              <text x="308" y="188">Figure and caption</text>
+              <text x="308" y="250">Footnotes</text>
+              <text x="308" y="285">References</text>
+            </g>
+          </svg>
+          <figcaption>The parts of a paper, top to bottom. Only the title is required.</figcaption>
+        </figure>
+
+        <figure class="table" id="tab-markup">
+          <figcaption>Markup for each part, and what the journal does with it.</figcaption>
+          <table>
+            <thead>
+              <tr><th>Part</th><th>Write</th><th>The journal adds</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Section</td><td><code>&lt;section&gt;&lt;h2&gt;</code></td><td>The section number</td></tr>
+              <tr><td>Figure</td><td><code>&lt;figure&gt;</code> with a <code>&lt;figcaption&gt;</code></td><td>“Figure 1.”</td></tr>
+              <tr><td>Table</td><td><code>&lt;figure class="table"&gt;</code></td><td>“Table 1.” and the rules</td></tr>
+              <tr><td>Equation</td><td><code>&lt;div class="eq"&gt;</code></td><td>The number at the right</td></tr>
+              <tr><td>Footnote</td><td><code>&lt;span class="fn"&gt;</code>, in place</td><td>The number, and the note at the end</td></tr>
+              <tr><td>Cross-reference</td><td><code>&lt;a href="#id"&gt;&lt;/a&gt;</code>, left empty</td><td>“Figure 2”, “Section 3”, “[4]”</td></tr>
+            </tbody>
+          </table>
+        </figure>
+
+        <p>Nothing is numbered by hand. Moving a figure above another renumbers both, along with every sentence that points at them. A link to an id that does not exist is printed as “??”, as tradition requires.</p>
+      </section>
+
+      <section id="figures">
+        <h2>Figures</h2>
+        <p>A figure may hold an image, an inline SVG drawing, a video, or a few HTML elements and a script. Tufte's advice on static graphics applies unchanged <a href="#ref-tufte"></a>: the figure should show the thing, with as little else as possible. Where the reader would learn more by changing something than by being told about it, the figure should let them <a href="#ref-victor"></a>.</p>
+        <p><a href="#fig-measure"></a> is an example. This journal sets its text in a column of about seventy characters. Bringhurst gives 45 to 75 characters as the satisfactory range for a line of serif text, and 66 as the ideal <a href="#ref-bringhurst"></a>. The claim is easier to believe after dragging the slider to both ends.</p>
+
+        <figure class="wide" id="fig-measure">
+          <div class="controls">
+            <label for="measure">Characters per line</label>
+            <input type="range" id="measure" min="20" max="100" value="66">
+            <output for="measure" id="measure-out"></output>
+          </div>
+          <p id="measure-text" style="font-size: 0.78rem; text-align: left; hyphens: manual; margin: 0;">A line that is too short breaks every phrase in two, and the eye spends its time turning around. A line that is too long makes the trip back to the left margin a small act of navigation, and the reader now and then lands on the line they have just finished. Somewhere between the two the column disappears and only the sentence is left. Nobody notices a good measure, which is how you can tell.</p>
+          <figcaption>The same paragraph at different line lengths. The script for this figure is twelve lines and sits directly under it in the page source.</figcaption>
+        </figure>
+        <script>
+          (function () {
+            var slider = document.getElementById("measure");
+            var out = document.getElementById("measure-out");
+            var text = document.getElementById("measure-text");
+            function update() {
+              var n = Number(slider.value);
+              text.style.maxWidth = n + "ch";
+              out.textContent = n + (n < 45 ? ", too narrow" : n > 75 ? ", too wide" : ", comfortable");
+            }
+            slider.addEventListener("input", update);
+            update();
+          })();
+        </script>
+
+        <p>A figure that needs more room than the text column can take the class <code>wide</code>, as the one above does. Each figure's script lives beside the figure. There is no build step, and no framework to learn or to outlive.<span class="fn">Knuth's argument for keeping a program and its explanation in one document <a href="#ref-knuth"></a> works just as well for a paragraph and its figure.</span></p>
+      </section>
+
+      <section id="apparatus">
+        <h2>Notes, equations and references</h2>
+        <p>A footnote is written where it is called, in the middle of the sentence, and the journal carries it to the end of the paper. Notes are for asides. Anything the argument depends on belongs in the text.</p>
+        <p>Simple equations are written in plain HTML. The number of characters on a line is roughly</p>
+        <div class="eq" id="eq-measure">
+          <span><var>n</var> ≈ <span class="frac"><span><var>w</var></span><span><var>c</var> <var>s</var></span></span></span>
+        </div>
+        <p>where <var>w</var> is the width of the column, <var>s</var> is the font size, and <var>c</var> is the average width of a character as a fraction of the font size, a little under one half for most text faces. <a href="#eq-measure"></a> is how the column width of this journal was chosen. A paper with heavier mathematics can load a typesetting library in its own head.</p>
+        <p>References go in a list at the end. Each item has an id, and an empty link to that id becomes its number in brackets.</p>
+      </section>
+
+      <section id="submitting">
+        <h2>Publishing a paper</h2>
+        <ol>
+          <li>Copy the folder <code>papers/_template</code> and rename it. The folder name becomes the address.</li>
+          <li>Write the paper in its <code>index.html</code>. Put images in the same folder.</li>
+          <li>Add one entry for it to the contents list on the cover page.</li>
+          <li>Commit and push. The paper is published when the push finishes.</li>
+        </ol>
+      </section>
+
+      <section class="back references">
+        <h2>References</h2>
+        <ol>
+          <li id="ref-bringhurst">R. Bringhurst. <i>The Elements of Typographic Style</i>. Hartley &amp; Marks, 1992.</li>
+          <li id="ref-knuth">D. E. Knuth. Literate programming. <i>The Computer Journal</i>, 27(2):97–111, 1984.</li>
+          <li id="ref-tufte">E. R. Tufte. <i>The Visual Display of Quantitative Information</i>. Graphics Press, 1983.</li>
+          <li id="ref-victor">B. Victor. <a href="https://worrydream.com/ExplorableExplanations/">Explorable explanations</a>. 2011.</li>
+        </ol>
+      </section>
+
+      <section class="back cite-as">
+        <p>Cite as: P. Ramachandra. Instructions for authors. <i>J. Pers. Curios.</i> 1 (0), 2026. writing.prineethr.com/papers/instructions-for-authors/</p>
+      </section>
+
+    </article>
+  </div>
+</body>
+</html>
